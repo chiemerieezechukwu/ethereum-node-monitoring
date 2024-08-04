@@ -1,0 +1,31 @@
+global:
+  scrape_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerting_rules.yml
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ["alertmanager:9093"]
+
+scrape_configs:
+  - job_name: beacon
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["beacon:8008"]
+        labels:
+          instance: ethereum_node_01
+
+  - job_name: geth
+    metrics_path: /debug/metrics/prometheus
+    static_configs:
+      - targets: ["execution_client:6060"]
+        labels:
+          instance: ethereum_node_01
+
+  - job_name: node_exporter
+    static_configs:
+      - targets: ["node_exporter:9100"]
+        labels:
+          instance: ethereum_node_01

@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: dashboards
+    type: file
+    updateIntervalSeconds: 60
+    allowUiUpdates: true
+    options:
+      path: $DASHBOARDS_DIR
+      foldersFromFilesStructure: true

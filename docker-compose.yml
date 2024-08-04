@@ -1,0 +1,126 @@
+services:
+  execution_client:
+    container_name: geth
+    image: ethereum/client-go:v1.14.3
+    restart: always
+    volumes:
+      - execution_client:/data
+      - ./jwtsecret:/jwtsecret/secret
+    command:
+      - --holesky
+      - --datadir=/data
+      - --http
+      - --http.api="engine,eth,web3,net,debug"
+      - --ws
+      - --ws.api="engine,eth,web3,net,debug"
+      - --http.corsdomain
+      - "*"
+      - --syncmode=full
+      - --authrpc.jwtsecret=/jwtsecret/secret
+      - --authrpc.vhosts
+      - "*"
+      - --authrpc.addr=execution_client
+      - --metrics
+      - --metrics.addr=execution_client
+
+  beacon:
+    container_name: lodestar
+    image: chainsafe/lodestar:v1.20.2
+    restart: always
+    volumes:
+      - beacon:/data
+      - logs:/logs
+      - ./jwtsecret:/jwtsecret/secret
+    command:
+      - beacon
+      - --network=holesky
+      - --checkpointSyncUrl=https://beaconstate-holesky.chainsafe.io
+      - --dataDir=/data
+      - --execution.urls=http://execution_client:8551
+      - --jwt-secret=/jwtsecret/secret
+      - --eth1.depositContractDeployBlock=0
+      - --metrics
+      - --metrics.address=beacon
+      - --logFile=/logs/beacon.log
+      - --logFileLevel=debug
+      - --logFileDailyRotate=5
+    # NodeJS applications have a default memory limit of 4GB on most machines.
+    # This limit is bit tight for a Mainnet node, it is recommended to raise the limit
+    # since memory may spike during certain network conditions.
+    environment:
+      NODE_OPTIONS: --max-old-space-size=8192
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    restart: always
+    ports:
+      - 3000:3000
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./grafana/dashboards:/dashboards
+      - ./grafana/datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+      - ./grafana/dashboard.yml:/etc/grafana/provisioning/dashboards/dashboard.yml
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      PROMETHEUS_URL: http://prometheus:9090 # populates the $PROMETHEUS_URL variable in grafana/datasource.yml
+      LOKI_URL: http://loki:3100 # populates the $LOKI_URL variable in grafana/datasource.yml
+      DASHBOARDS_DIR: /dashboards # populates the $DASHBOARDS_DIR variable in grafana/dashboard.yml
+
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:latest
+    restart: always
+    volumes:
+      - prometheus:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerting_rules.yml:/etc/prometheus/alerting_rules.yml
+    ports:
+      - 9090:9090
+
+  node_exporter:
+    container_name: node_exporter
+    image: prom/node-exporter:latest
+    restart: always
+
+  loki:
+    container_name: loki
+    image: grafana/loki:latest
+    restart: always
+    ports:
+      - 3100:3100
+    volumes:
+      - ./loki/loki.yml:/etc/loki/loki.yml
+    command: -config.file=/etc/loki/loki.yml
+
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:latest
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml
+    command: -config.file=/etc/promtail/promtail.yml
+
+  alertmanager:
+    container_name: alertmanager
+    image: prom/alertmanager:latest
+    restart: always
+    ports:
+      - 9093:9093
+    volumes:
+      - alertmanager:/data
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --log.level=debug
+
+volumes:
+  beacon:
+  execution_client:
+  logs:
+  prometheus:
+  grafana:
+  alertmanager:

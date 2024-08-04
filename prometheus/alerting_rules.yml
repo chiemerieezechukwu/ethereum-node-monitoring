@@ -1,0 +1,38 @@
+groups:
+  - name: ethereum
+    rules:
+      - alert: ContainerDown
+        expr: up{job=~"geth|beacon"} == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.job }} is down"
+          description: "The {{ $labels.job }} container on instance {{ $labels.instance }} is down."
+
+      - alert: ServerHighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on server {{ $labels.instance }}"
+          description: "Server {{ $labels.instance }} has memory usage over 50%. Current usage: {{ $value | humanizePercentage }}."
+
+      - alert: ServerHighCPUUsage
+        expr: rate(node_cpu_seconds_total{job="node_exporter", mode="user"}[5m]) > 0.5
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on server {{ $labels.instance }}"
+          description: "Server {{ $labels.instance }} has CPU usage over 50%. Current usage: {{ $value | humanizePercentage }}."
+
+      - alert: ServerDown
+        expr: up{job="node_exporter"} == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Server {{ $labels.instance }} is down"
+          description: "Server {{ $labels.instance }} is down."

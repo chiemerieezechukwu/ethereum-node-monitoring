@@ -1,0 +1,16 @@
+route:
+  receiver: default
+  group_by:
+    - alertname
+    - job
+    - severity
+  group_wait: 30s
+
+receivers:
+  - name: default
+    slack_configs:
+      - send_resolved: true
+        api_url: https://hooks.slack.com/services/RANDOM/STRING/HERE # replace with slack webhook url
+        channel: '#random_channel' # replace with slack channel
+        title: '{{ .CommonAnnotations.alertname }}'
+        text: "*Alert:* {{ .CommonLabels.alertname }}\n*Severity:* {{ .CommonLabels.severity }}\n*Instance:* {{ .CommonLabels.instance }}\n*Job:* {{ .CommonLabels.job }}\n*Title:* {{ .CommonAnnotations.summary }}\n*Description:* {{ .CommonAnnotations.description }}"
